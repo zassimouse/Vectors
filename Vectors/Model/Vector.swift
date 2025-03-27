@@ -6,13 +6,11 @@
 //
 
 import Foundation
-
-import Foundation
 import UIKit
 
-struct Vector {
-    let start: CGPoint
-    let end: CGPoint
+class Vector {
+    var start: CGPoint
+    var end: CGPoint
     let color: UIColor
 
     var length: CGFloat {
@@ -26,6 +24,6 @@ struct Vector {
     init(start: CGPoint, end: CGPoint) {
         self.start = start
         self.end = end
-        self.color = .random 
+        self.color = .random
     }
 }
