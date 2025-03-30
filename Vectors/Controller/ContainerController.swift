@@ -8,6 +8,7 @@
 import UIKit
 
 class ContainerController: UIViewController {
+    
     // MARK: - Properties
     var menuController: UIViewController!
     var centerController: UIViewController!
@@ -20,14 +21,9 @@ class ContainerController: UIViewController {
         configureHomeViewController()
     }
     
-//    override var prefferedStatusBarStyle: UIStatusBarStyle {
-//        .lightContent
-//    }
-    
     // MARK: - Handlers
-    
     func configureHomeViewController() {
-        let homeController = HomeController()
+        let homeController = CanvasController()
         homeController.delegate = self
         centerController = UINavigationController(rootViewController: homeController)
         view.addSubview(centerController.view)
@@ -47,21 +43,16 @@ class ContainerController: UIViewController {
     
     func showMenuController(shouldExpand: Bool) {
         if shouldExpand {
-            // Show menu
             UIView.animate(withDuration: 0.3, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0, options: .curveEaseInOut, animations: {
                 self.centerController.view.frame.origin.x = self.centerController.view.frame.width / 3
             }, completion: nil)
 
         } else {
-            // Hide menu
             UIView.animate(withDuration: 0.3, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0, options: .curveEaseInOut, animations: {
                 self.centerController.view.frame.origin.x = 0
             }, completion: nil)
         }
     }
-    
-
-
     
     // MARK: - SetupUI
     
@@ -79,6 +70,4 @@ extension ContainerController: HomeControllerDeledate {
         isExpanded = !isExpanded
         showMenuController(shouldExpand: isExpanded)
     }
-    
-    
 }

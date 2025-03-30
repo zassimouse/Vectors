@@ -41,7 +41,7 @@ class AddVectorController: UIViewController {
     private let textFieldY1: UITextField = {
         let textField = UITextField()
         textField.borderStyle = .roundedRect
-        textField.keyboardType = .decimalPad
+        textField.keyboardType = .numbersAndPunctuation
         return textField
     }()
     
@@ -147,9 +147,9 @@ class AddVectorController: UIViewController {
     @objc private func addButtonTapped() {
         print("add tapped")
         guard let x1 = Double(textFieldX1.text?.replacingOccurrences(of: ",", with: ".") ?? ""),
-              let y1 = Double(textFieldX1.text?.replacingOccurrences(of: ",", with: ".") ?? ""),
-              let x2 = Double(textFieldX1.text?.replacingOccurrences(of: ",", with: ".") ?? ""),
-              let y2 = Double(textFieldX1.text?.replacingOccurrences(of: ",", with: ".") ?? "") else { return }
+              let y1 = Double(textFieldX2.text?.replacingOccurrences(of: ",", with: ".") ?? ""),
+              let x2 = Double(textFieldY1.text?.replacingOccurrences(of: ",", with: ".") ?? ""),
+              let y2 = Double(textFieldY2.text?.replacingOccurrences(of: ",", with: ".") ?? "") else { return }
         
         delegate?.didAddVector(startX: CGFloat(x1), startY: CGFloat(y1), endX: CGFloat(x2), endY: CGFloat(y2))
         dismiss(animated: true)

@@ -8,11 +8,12 @@
 import UIKit
 import SpriteKit
 
-class HomeController: UIViewController {
+class CanvasController: UIViewController {
 
    // MARK: - Properties
-    
     weak var delegate: HomeControllerDeledate?
+    
+    private var scene: CanvasScene!
     
     // MARK: - Subviews
     
@@ -26,7 +27,7 @@ class HomeController: UIViewController {
         let skView = SKView(frame: view.bounds)
         view.addSubview(skView)
         
-        let scene = CanvasScene(size: view.bounds.size)
+        scene = CanvasScene(size: view.bounds.size)
         scene.scaleMode = .resizeFill
         skView.presentScene(scene)
     }
@@ -77,8 +78,16 @@ class HomeController: UIViewController {
 
 }
 
-extension HomeController: AddVectorDelegate {
+extension CanvasController: AddVectorDelegate {
     func didAddVector(startX: CGFloat, startY: CGFloat, endX: CGFloat, endY: CGFloat) {
         print("Добавлен вектор: (\(startX), \(startY)) -> (\(endX), \(endY))")
+        
+        let vector = Vector(start: CGPoint(x: startX, y: startY), end: CGPoint(x: endX, y: endY))
+        scene.addVector(vector)
+        CoreDataManager.shared.saveVector(vector)
+        let v = CoreDataManager.shared.fetchVectors()
+        v.forEach { vector in
+            print("\(vector.start.x) \(vector.start.y) \(vector.end.x) \(vector.end.y)")
+        }
     }
 }

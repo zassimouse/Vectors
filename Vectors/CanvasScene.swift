@@ -86,7 +86,7 @@ class CanvasScene: SKScene {
         addChild(yAxis)
     }
     
-    private func addVector(_ vector: Vector) {
+    func addVector(_ vector: Vector) {
         let path = UIBezierPath()
         
         // Draw the main vector line
