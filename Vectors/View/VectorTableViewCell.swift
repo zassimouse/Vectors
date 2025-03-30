@@ -8,6 +8,7 @@
 import UIKit
 
 class VectorTableViewCell: UITableViewCell {
+    
     static let identifier = String(describing: VectorTableViewCell.self)
     
     private let colorDot: UIView = {
@@ -81,19 +82,9 @@ class VectorTableViewCell: UITableViewCell {
     
     func configure(with vector: Vector, color: UIColor) {
         colorDot.backgroundColor = color
-        startCoordinateLabel.text = "(\(vector.start.x), \(vector.start.y))"
-        endCoordinateLabel.text = "(\(vector.end.x), \(vector.end.y))"
+        startCoordinateLabel.text = "(\(vector.start.x); \(vector.start.y))"
+        endCoordinateLabel.text = "(\(vector.end.x); \(vector.end.y))"
         lengthLabel.text = "\(vector.length)"
     }
     
-    
-//    override func contextMenuConfigurationForMenu(at location: CGPoint) -> UIContextMenuConfiguration? {
-//        return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in
-//            let deleteAction = UIAction(title: "Delete", image: UIImage(systemName: "trash"), attributes: .destructive) { _ in
-//                NotificationCenter.default.post(name: NSNotification.Name("DeleteVector"), object: self)
-//            }
-//            
-//            return UIMenu(title: "", children: [deleteAction])
-//        }
-//    }
 }

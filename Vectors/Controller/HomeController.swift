@@ -50,18 +50,19 @@ class HomeController: UIViewController {
     }
     
     @objc private func presentAddVectorSheet() {
-        let addVectorVC = AddVectorViewController()
+        let addVectorVC = AddVectorController()
         addVectorVC.delegate = self
-        if let sheet = addVectorVC.sheetPresentationController {
-            sheet.detents = [.medium()]
-        }
-        present(addVectorVC, animated: true)
-    }
-    
-//    func didAddVector(startX: CGFloat, startY: CGFloat, endX: CGFloat, endY: CGFloat) {
-//        print("Добавлен вектор: (\(startX), \(startY)) -> (\(endX), \(endY))")
-//    }
 
+        if let sheet = addVectorVC.sheetPresentationController {
+            sheet.detents = [.custom { context in
+                return 240
+            }]
+        }
+
+        present(addVectorVC, animated: true)
+
+
+    }
     
     // MARK: - SetupUI
 
@@ -76,9 +77,8 @@ class HomeController: UIViewController {
 
 }
 
-extension HomeController: AddVectorViewControllerDelegate {
+extension HomeController: AddVectorDelegate {
     func didAddVector(startX: CGFloat, startY: CGFloat, endX: CGFloat, endY: CGFloat) {
         print("Добавлен вектор: (\(startX), \(startY)) -> (\(endX), \(endY))")
-        // Тут можно добавить вектор в массив и обновить сцену
     }
 }
