@@ -44,6 +44,46 @@ class CanvasScene: SKScene {
         
         longPressGesture = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPressGesture(_:)))
         view.addGestureRecognizer(longPressGesture)
+        
+        drawGrid()
+        drawAxes()
+    }
+    
+    private func drawGrid() {
+        let gridSize: CGFloat = 50.0
+        let gridLineCount: CGFloat = 20.0
+
+        for x in stride(from: -gridLineCount * gridSize, to: gridLineCount * gridSize, by: gridSize) {
+            let line = SKShapeNode()
+            line.path = UIBezierPath(rect: CGRect(x: x, y: -gridLineCount * gridSize, width: gridSize, height: gridLineCount * 2 * gridSize)).cgPath
+            line.strokeColor = .lightGray
+            line.lineWidth = 1
+            addChild(line)
+        }
+        
+        for y in stride(from: -gridLineCount * gridSize, to: gridLineCount * gridSize, by: gridSize) {
+            let line = SKShapeNode()
+            line.path = UIBezierPath(rect: CGRect(x: -gridLineCount * gridSize, y: y, width: gridLineCount * 2 * gridSize, height: gridSize)).cgPath
+            line.strokeColor = .lightGray
+            line.lineWidth = 1
+            addChild(line)
+        }
+    }
+
+    private func drawAxes() {
+        let axisLineWidth: CGFloat = 4.0
+        
+        // Draw X Axis
+        let xAxis = SKShapeNode()
+        xAxis.path = UIBezierPath(rect: CGRect(x: -frame.size.width / 2, y: 0, width: frame.size.width, height: axisLineWidth)).cgPath
+        xAxis.fillColor = .black
+        addChild(xAxis)
+
+        // Draw Y Axis
+        let yAxis = SKShapeNode()
+        yAxis.path = UIBezierPath(rect: CGRect(x: 0, y: -frame.size.height / 2, width: axisLineWidth, height: frame.size.height)).cgPath
+        yAxis.fillColor = .black
+        addChild(yAxis)
     }
     
     private func addVector(_ vector: Vector) {
@@ -80,10 +120,10 @@ class CanvasScene: SKScene {
         vectorNode.lineWidth = 3
         vectorNode.lineJoin = .miter
 
+        vectorNode.name = String(vector.id)
+        
         addChild(vectorNode)
     }
-
-
     
     private func shortenVectorEnd(from start: CGPoint, to end: CGPoint, by distance: CGFloat) -> CGPoint {
         // Calculate the direction vector from start to end
@@ -163,7 +203,7 @@ class CanvasScene: SKScene {
                     vector.end.y += dy
                     lastTranslation = sceneLocation
                 }
-                self.removeAllChildren()
+                removeVectorByID(vector.id)
                 for v in vectors {
                     addVector(v)
                 }
@@ -180,6 +220,15 @@ class CanvasScene: SKScene {
             break
         }
     }
+    
+    // Method to remove a vector by its id
+    func removeVectorByID(_ id: Int) {
+        if let node = childNode(withName: String(id)) {
+            node.removeFromParent()
+        }
+    }
+
+    
     
     private func isPointNearVector(_ point: CGPoint, _ vector: Vector) -> Bool {
         let lineWidth: CGFloat = 20.0
