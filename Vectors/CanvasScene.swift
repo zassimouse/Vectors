@@ -45,9 +45,11 @@ class CanvasScene: SKScene {
         longPressGesture = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPressGesture(_:)))
         view.addGestureRecognizer(longPressGesture)
     }
-
+    
     private func addVector(_ vector: Vector) {
         let path = UIBezierPath()
+        
+        // Draw the main vector line
         path.move(to: vector.start)
         let shortenedEnd = shortenVectorEnd(from: vector.start, to: vector.end, by: 5.0)
         path.addLine(to: shortenedEnd)
@@ -65,24 +67,23 @@ class CanvasScene: SKScene {
             x: vector.end.x - arrowHeight * cos(angle) - arrowWidth * sin(angle),
             y: vector.end.y - arrowHeight * sin(angle) + arrowWidth * cos(angle)
         )
-        
-        let arrowPath = UIBezierPath()
-        arrowPath.move(to: vector.end)
-        arrowPath.addLine(to: arrowPoint1)
-        arrowPath.addLine(to: arrowPoint2)
-        arrowPath.close()
+
+        // Draw the arrowhead
+        path.move(to: vector.end)
+        path.addLine(to: arrowPoint1)
+        path.addLine(to: arrowPoint2)
+        path.close()
         
         let vectorNode = SKShapeNode(path: path.cgPath)
+        vectorNode.fillColor = vector.color
         vectorNode.strokeColor = vector.color
         vectorNode.lineWidth = 3
-        
-        let arrowNode = SKShapeNode(path: arrowPath.cgPath)
-        arrowNode.fillColor = vector.color
-        arrowNode.strokeColor = vector.color
-        
+        vectorNode.lineJoin = .miter
+
         addChild(vectorNode)
-        addChild(arrowNode)
     }
+
+
     
     private func shortenVectorEnd(from start: CGPoint, to end: CGPoint, by distance: CGFloat) -> CGPoint {
         // Calculate the direction vector from start to end
@@ -125,38 +126,70 @@ class CanvasScene: SKScene {
     @objc private func handleLongPressGesture(_ gesture: UILongPressGestureRecognizer) {
         let location = gesture.location(in: view)
         let sceneLocation = convertPoint(fromView: location)
-        
+
         switch gesture.state {
         case .began:
             for vector in vectors {
                 if distance(from: sceneLocation, to: vector.start) < 20 {
                     dragType = .start
                     selectedVector = vector
-                    break
                 } else if distance(from: sceneLocation, to: vector.end) < 20 {
                     dragType = .end
                     selectedVector = vector
+                } else if isPointNearVector(sceneLocation, vector) {
+                    dragType = .parallel
+                    selectedVector = vector
+                    lastTranslation = sceneLocation
+                }
+                
+                if selectedVector != nil {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                     break
                 }
             }
-            
+
         case .changed:
-            if let point = dragType, let vector = selectedVector {
-                print(sceneLocation)
-                if point == .start {
+            if let vector = selectedVector {
+                if dragType == .start {
                     vector.start = sceneLocation
-                } else if point == .end {
+                } else if dragType == .end {
                     vector.end = sceneLocation
+                } else if dragType == .parallel {
+                    let dx = sceneLocation.x - lastTranslation.x
+                    let dy = sceneLocation.y - lastTranslation.y
+                    vector.start.x += dx
+                    vector.start.y += dy
+                    vector.end.x += dx
+                    vector.end.y += dy
+                    lastTranslation = sceneLocation
                 }
                 self.removeAllChildren()
-                addVector(vector)
+                for v in vectors {
+                    addVector(v)
+                }
             }
-            
+
         case .ended:
+            if selectedVector != nil {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            }
             dragType = nil
             selectedVector = nil
+
         default:
             break
         }
     }
+    
+    private func isPointNearVector(_ point: CGPoint, _ vector: Vector) -> Bool {
+        let lineWidth: CGFloat = 20.0
+        let startToEnd = distance(from: vector.start, to: vector.end)
+        let startToPoint = distance(from: vector.start, to: point)
+        let endToPoint = distance(from: vector.end, to: point)
+
+        return abs(startToPoint + endToPoint - startToEnd) < lineWidth
+    }
+
 }
+
+
