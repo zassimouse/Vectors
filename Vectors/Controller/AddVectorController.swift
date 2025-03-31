@@ -13,8 +13,10 @@ protocol AddVectorDelegate: AnyObject {
 
 class AddVectorController: UIViewController {
     
+    // MARK: - Properties
     weak var delegate: AddVectorDelegate?
     
+    // MARK: - Subviews
     private let label1: UILabel = {
         let label = UILabel()
         label.text = "(x1; y1)"
@@ -96,11 +98,13 @@ class AddVectorController: UIViewController {
         return stackView
     }()
     
+    // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
     }
     
+    // MARK: - SetupUI
     private func setupUI() {
         view.backgroundColor = .systemBackground
     
@@ -144,18 +148,9 @@ class AddVectorController: UIViewController {
         ])
     }
     
-    @objc private func addButtonTapped() {
-        guard let x1 = Double(textFieldX1.text?.replacingOccurrences(of: ",", with: ".") ?? ""),
-              let y1 = Double(textFieldX2.text?.replacingOccurrences(of: ",", with: ".") ?? ""),
-              let x2 = Double(textFieldY1.text?.replacingOccurrences(of: ",", with: ".") ?? ""),
-              let y2 = Double(textFieldY2.text?.replacingOccurrences(of: ",", with: ".") ?? "") else { return }
-        
-        delegate?.didAddVector(startX: CGFloat(x1), startY: CGFloat(y1), endX: CGFloat(x2), endY: CGFloat(y2))
-        dismiss(animated: true)
-    }
-    
+    // MARK: - Methods
     private func isValidInput(_ text: String) -> Bool {
-        let regex = "^-?(?!0\\d)(\\d+|\\d*\\,\\d+)$"
+        let regex = "^-?(?!0\\d)(\\d+|\\d*\\,\\d{1,2})$"
         let predicate = NSPredicate(format: "SELF MATCHES %@", regex)
         return predicate.evaluate(with: text)
     }
@@ -169,6 +164,18 @@ class AddVectorController: UIViewController {
         addButton.isEnabled = allFieldsValid
         addButton.backgroundColor = allFieldsValid ? .systemBlue : .systemGray
     }
+    
+    // MARK: - Selectors
+    @objc private func addButtonTapped() {
+        guard let x1 = Double(textFieldX1.text?.replacingOccurrences(of: ",", with: ".") ?? ""),
+              let y1 = Double(textFieldX2.text?.replacingOccurrences(of: ",", with: ".") ?? ""),
+              let x2 = Double(textFieldY1.text?.replacingOccurrences(of: ",", with: ".") ?? ""),
+              let y2 = Double(textFieldY2.text?.replacingOccurrences(of: ",", with: ".") ?? "") else { return }
+        
+        delegate?.didAddVector(startX: CGFloat(x1), startY: CGFloat(y1), endX: CGFloat(x2), endY: CGFloat(y2))
+        dismiss(animated: true)
+    }
+    
 }
 
 extension AddVectorController: UITextFieldDelegate {
@@ -176,7 +183,6 @@ extension AddVectorController: UITextFieldDelegate {
         let allowedCharacters = CharacterSet(charactersIn: "0123456789,-")
         let characterSet = CharacterSet(charactersIn: string)
         
-        // Разрешаем только цифры, запятую и минус
         if !allowedCharacters.isSuperset(of: characterSet) {
             return false
         }
@@ -184,22 +190,18 @@ extension AddVectorController: UITextFieldDelegate {
         let currentText = textField.text ?? ""
         let newText = (currentText as NSString).replacingCharacters(in: range, with: string)
 
-        // Запрещаем начинать с запятой
         if newText.first == "," {
             return false
         }
 
-        // Запрещаем минус не на первом месте
         if newText.dropFirst().contains("-") {
             return false
         }
 
-        // Разрешаем минус только в начале
         if newText.count > 1, newText.first == "-", !CharacterSet.decimalDigits.contains(newText.unicodeScalars.dropFirst().first!) {
             return false
         }
 
-        // Запрещаем начинать с нуля, если за ним нет запятой (учитывая возможный минус)
         let numberStartIndex = newText.first == "-" ? newText.index(after: newText.startIndex) : newText.startIndex
         if newText.count > numberStartIndex.utf16Offset(in: newText) + 1,
            newText[numberStartIndex] == "0",
@@ -207,10 +209,16 @@ extension AddVectorController: UITextFieldDelegate {
             return false
         }
 
-        // Разрешаем только одну запятую
         let commaCount = newText.filter { $0 == "," }.count
         if commaCount > 1 {
             return false
+        }
+
+        if let commaIndex = newText.firstIndex(of: ",") {
+            let decimalPart = newText[newText.index(after: commaIndex)...]
+            if decimalPart.count > 2 {
+                return false
+            }
         }
 
         return true
@@ -220,3 +228,4 @@ extension AddVectorController: UITextFieldDelegate {
         updateButtonState()
     }
 }
+

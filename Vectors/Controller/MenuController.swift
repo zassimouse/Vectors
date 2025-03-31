@@ -9,22 +9,26 @@ import UIKit
 
 protocol MenuControllerDeledate: AnyObject {
     func deleteVector(_ vector: Vector)
+    func highlightVector(_ vector: Vector)
 }
 
 class MenuController: UIViewController {
     
+    // MARK: - Properties
     weak var delegate: MenuControllerDeledate?
-    
-    var tableView: UITableView!
-    
     var vectors: [Vector] = []
 
+    // MARK: - Subviews
+    var tableView: UITableView!
+    
+    // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         configureTableView()
         vectors = CoreDataManager.shared.fetchVectors()
     }
     
+    // MARK: - Methods
     func addVector(_ vector: Vector) {
         vectors.append(vector)
         tableView.reloadData()
@@ -79,6 +83,10 @@ extension MenuController: UITableViewDelegate, UITableViewDataSource {
             }
             return UIMenu(title: "", children: [deleteAction])
         }
+    }
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        delegate?.highlightVector(vectors[indexPath.row])
     }
 
 }

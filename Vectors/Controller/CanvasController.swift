@@ -16,13 +16,10 @@ protocol HomeControllerDeledate: AnyObject {
 
 class CanvasController: UIViewController {
 
-   // MARK: - Properties
+    // MARK: - Properties
     weak var delegate: HomeControllerDeledate?
-    
     private var scene: CanvasScene!
-    
-    // MARK: - Subviews
-    
+        
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -41,9 +38,13 @@ class CanvasController: UIViewController {
         skView.presentScene(scene)
     }
     
-    // MARK: - Handlers
+    // MARK: - Methods
     func deleteVector(_ vector: Vector) {
         scene.deleteVector(vector)
+    }
+    
+    func highlightVector(_ vector: Vector) {
+        scene.highlightVector(vector)
     }
     
     func configureNavigationBar() {
@@ -63,6 +64,7 @@ class CanvasController: UIViewController {
         navigationItem.rightBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "plus"), style: .plain, target: self, action: #selector(presentAddVectorSheet))
     }
     
+    // MARK: - Selectors
     @objc private func presentAddVectorSheet() {
         let addVectorVC = AddVectorController()
         addVectorVC.delegate = self
@@ -72,19 +74,9 @@ class CanvasController: UIViewController {
                 return 240
             }]
         }
-
         present(addVectorVC, animated: true)
-
-
     }
     
-    // MARK: - SetupUI
-
-    
-    // MARK: - Methods
-    
-    
-    // MARK: - Selectors
     @objc func toggleMenu() {
         delegate?.toggleMenu()
     }
