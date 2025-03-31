@@ -46,6 +46,10 @@ class CanvasController: UIViewController {
         scene.deleteVector(vector)
     }
     
+    func highlightVector(_ vector: Vector) {
+        scene.highlightVector(vector)
+    }
+    
     func configureNavigationBar() {
         let appearance = UINavigationBarAppearance()
         appearance.configureWithOpaqueBackground()

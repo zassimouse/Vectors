@@ -37,6 +37,9 @@ class CanvasScene: SKScene {
     
     func configure(with vectors: [Vector]) {
         self.vectors = vectors
+        for vector in vectors {
+            drawVector(vector)
+        }
     }
 
     override func didMove(to view: SKView) {
@@ -55,7 +58,7 @@ class CanvasScene: SKScene {
     
     private func drawGrid() {
         let gridSize: CGFloat = 50.0
-        let gridLineCount: CGFloat = 20.0
+        let gridLineCount: CGFloat = 50.0
 
         for x in stride(from: -gridLineCount * gridSize, to: gridLineCount * gridSize, by: gridSize) {
             let line = SKShapeNode()
@@ -73,10 +76,36 @@ class CanvasScene: SKScene {
             addChild(line)
         }
     }
+    
+
+    func highlightVector(_ vector: Vector) {
+        guard let node = childNode(withName: String(vector.id)) as? SKShapeNode else { return }
+        
+        if let isHighlighted = node.userData?["isHighlighted"] as? Bool, isHighlighted {
+            return
+        }
+        
+        
+        let originalLineWidth = node.lineWidth
+        node.lineWidth = 5
+        
+        if node.userData == nil {
+            node.userData = NSMutableDictionary()
+        }
+        node.userData?["isHighlighted"] = true
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            print("highlight")
+            node.lineWidth = originalLineWidth
+            node.userData?["isHighlighted"] = false
+        }
+    }
+
 
     func deleteVector(_ vector: Vector) {
         vectors.removeAll { $0.id == vector.id }
         removeVectorByID(vector.id)
+        highlightVector(vector)
     }
     
     func drawVector(_ vector: Vector) {
@@ -152,6 +181,8 @@ class CanvasScene: SKScene {
         if gesture.state == .began {
             lastTranslation = .zero
         }
+        
+        
         
         let deltaX = -(translation.x - lastTranslation.x)
         let deltaY = (translation.y - lastTranslation.y)

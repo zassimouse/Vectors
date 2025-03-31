@@ -9,6 +9,7 @@ import UIKit
 
 protocol MenuControllerDeledate: AnyObject {
     func deleteVector(_ vector: Vector)
+    func highlightVector(_ vector: Vector)
 }
 
 class MenuController: UIViewController {
@@ -79,6 +80,10 @@ extension MenuController: UITableViewDelegate, UITableViewDataSource {
             }
             return UIMenu(title: "", children: [deleteAction])
         }
+    }
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        delegate?.highlightVector(vectors[indexPath.row])
     }
 
 }

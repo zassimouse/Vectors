@@ -67,6 +67,10 @@ extension ContainerController: MenuControllerDeledate {
     func deleteVector(_ vector: Vector) {
         homeController.deleteVector(vector)
     }
+    
+    func highlightVector(_ vector: Vector) {
+        homeController.highlightVector(vector)
+    }
 }
 
 
