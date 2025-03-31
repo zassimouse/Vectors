@@ -10,6 +10,7 @@ import UIKit
 
 
 class CoreDataManager {
+
     static let shared = CoreDataManager()
     
     let persistentContainer: NSPersistentContainer
@@ -124,9 +125,6 @@ extension Vector {
     }
 }
 
-
-
-// MARK: - UIColor Encoding & Decoding
 extension UIColor {
     func toData() -> Data? {
         try? NSKeyedArchiver.archivedData(withRootObject: self, requiringSecureCoding: true)

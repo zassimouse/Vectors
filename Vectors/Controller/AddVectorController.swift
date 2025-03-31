@@ -13,8 +13,10 @@ protocol AddVectorDelegate: AnyObject {
 
 class AddVectorController: UIViewController {
     
+    // MARK: - Properties
     weak var delegate: AddVectorDelegate?
     
+    // MARK: - Subviews
     private let label1: UILabel = {
         let label = UILabel()
         label.text = "(x1; y1)"
@@ -96,11 +98,13 @@ class AddVectorController: UIViewController {
         return stackView
     }()
     
+    // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
     }
     
+    // MARK: - SetupUI
     private func setupUI() {
         view.backgroundColor = .systemBackground
     
@@ -144,16 +148,7 @@ class AddVectorController: UIViewController {
         ])
     }
     
-    @objc private func addButtonTapped() {
-        guard let x1 = Double(textFieldX1.text?.replacingOccurrences(of: ",", with: ".") ?? ""),
-              let y1 = Double(textFieldX2.text?.replacingOccurrences(of: ",", with: ".") ?? ""),
-              let x2 = Double(textFieldY1.text?.replacingOccurrences(of: ",", with: ".") ?? ""),
-              let y2 = Double(textFieldY2.text?.replacingOccurrences(of: ",", with: ".") ?? "") else { return }
-        
-        delegate?.didAddVector(startX: CGFloat(x1), startY: CGFloat(y1), endX: CGFloat(x2), endY: CGFloat(y2))
-        dismiss(animated: true)
-    }
-    
+    // MARK: - Methods
     private func isValidInput(_ text: String) -> Bool {
         let regex = "^-?(?!0\\d)(\\d+|\\d*\\,\\d{1,2})$"
         let predicate = NSPredicate(format: "SELF MATCHES %@", regex)
@@ -169,6 +164,18 @@ class AddVectorController: UIViewController {
         addButton.isEnabled = allFieldsValid
         addButton.backgroundColor = allFieldsValid ? .systemBlue : .systemGray
     }
+    
+    // MARK: - Selectors
+    @objc private func addButtonTapped() {
+        guard let x1 = Double(textFieldX1.text?.replacingOccurrences(of: ",", with: ".") ?? ""),
+              let y1 = Double(textFieldX2.text?.replacingOccurrences(of: ",", with: ".") ?? ""),
+              let x2 = Double(textFieldY1.text?.replacingOccurrences(of: ",", with: ".") ?? ""),
+              let y2 = Double(textFieldY2.text?.replacingOccurrences(of: ",", with: ".") ?? "") else { return }
+        
+        delegate?.didAddVector(startX: CGFloat(x1), startY: CGFloat(y1), endX: CGFloat(x2), endY: CGFloat(y2))
+        dismiss(animated: true)
+    }
+    
 }
 
 extension AddVectorController: UITextFieldDelegate {
@@ -207,6 +214,13 @@ extension AddVectorController: UITextFieldDelegate {
             return false
         }
 
+        if let commaIndex = newText.firstIndex(of: ",") {
+            let decimalPart = newText[newText.index(after: commaIndex)...]
+            if decimalPart.count > 2 {
+                return false
+            }
+        }
+
         return true
     }
 
@@ -214,3 +228,4 @@ extension AddVectorController: UITextFieldDelegate {
         updateButtonState()
     }
 }
+

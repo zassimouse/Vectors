@@ -14,13 +14,14 @@ protocol CanvasSceneDelegate: SKSceneDelegate {
 
 class CanvasScene: SKScene {
     
-    weak var canvasDelegate: CanvasSceneDelegate?
-    
     enum VectorDrag {
         case start
         case end
         case parallel
     }
+    
+    // MARK: - Properties
+    weak var canvasDelegate: CanvasSceneDelegate?
     
     private var panGesture: UIPanGestureRecognizer!
     private var longPressGesture: UILongPressGestureRecognizer!
@@ -35,13 +36,16 @@ class CanvasScene: SKScene {
     private let snapThreshold: CGFloat = 10.0
     private let dragThreshold: CGFloat = 30.0
     
+    private var rightAngleMarkers: [String: SKShapeNode] = [:]
+    
+    // MARK: - Lifecycle
     func configure(with vectors: [Vector]) {
         self.vectors = vectors
         for vector in vectors {
             drawVector(vector)
         }
     }
-
+    
     override func didMove(to view: SKView) {
         backgroundColor = .white
         drawGrid()
@@ -54,135 +58,16 @@ class CanvasScene: SKScene {
         
         longPressGesture = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPressGesture(_:)))
         view.addGestureRecognizer(longPressGesture)
+        
+        drawInitialMarkers()
     }
     
-    private func drawGrid() {
-        let gridSize: CGFloat = 50.0
-        let gridLineCount: CGFloat = 50.0
-
-        for x in stride(from: -gridLineCount * gridSize, to: gridLineCount * gridSize, by: gridSize) {
-            let line = SKShapeNode()
-            line.path = UIBezierPath(rect: CGRect(x: x, y: -gridLineCount * gridSize, width: gridSize, height: gridLineCount * 2 * gridSize)).cgPath
-            line.strokeColor = .lightGray
-            line.lineWidth = 1
-            addChild(line)
-        }
-        
-        for y in stride(from: -gridLineCount * gridSize, to: gridLineCount * gridSize, by: gridSize) {
-            let line = SKShapeNode()
-            line.path = UIBezierPath(rect: CGRect(x: -gridLineCount * gridSize, y: y, width: gridLineCount * 2 * gridSize, height: gridSize)).cgPath
-            line.strokeColor = .lightGray
-            line.lineWidth = 1
-            addChild(line)
-        }
-    }
-    
-
-    func highlightVector(_ vector: Vector) {
-        guard let node = childNode(withName: String(vector.id)) as? SKShapeNode else { return }
-        
-        if let isHighlighted = node.userData?["isHighlighted"] as? Bool, isHighlighted {
-            return
-        }
-        
-        
-        let originalLineWidth = node.lineWidth
-        node.lineWidth = 5
-        
-        if node.userData == nil {
-            node.userData = NSMutableDictionary()
-        }
-        node.userData?["isHighlighted"] = true
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            print("highlight")
-            node.lineWidth = originalLineWidth
-            node.userData?["isHighlighted"] = false
-        }
-    }
-
-
-    func deleteVector(_ vector: Vector) {
-        vectors.removeAll { $0.id == vector.id }
-        removeVectorByID(vector.id)
-        highlightVector(vector)
-    }
-    
-    func drawVector(_ vector: Vector) {
-        let path = UIBezierPath()
-        
-        // Draw the main vector line
-        path.move(to: vector.start)
-        let shortenedEnd = shortenVectorEnd(from: vector.start, to: vector.end, by: 5.0)
-        path.addLine(to: shortenedEnd)
-        
-        let arrowWidth: CGFloat = 8.0
-        let arrowHeight: CGFloat = 25.0
-        let angle = vector.angle
-        
-        // Calculate arrow points
-        let arrowPoint1 = CGPoint(
-            x: vector.end.x - arrowHeight * cos(angle) + arrowWidth * sin(angle),
-            y: vector.end.y - arrowHeight * sin(angle) - arrowWidth * cos(angle)
-        )
-        let arrowPoint2 = CGPoint(
-            x: vector.end.x - arrowHeight * cos(angle) - arrowWidth * sin(angle),
-            y: vector.end.y - arrowHeight * sin(angle) + arrowWidth * cos(angle)
-        )
-
-        path.move(to: vector.end)
-        path.addLine(to: arrowPoint1)
-        path.addLine(to: arrowPoint2)
-        path.close()
-        
-        let vectorNode = SKShapeNode(path: path.cgPath)
-        vectorNode.fillColor = vector.color
-        vectorNode.strokeColor = vector.color
-        vectorNode.lineWidth = 3
-        vectorNode.lineJoin = .miter
-
-        vectorNode.name = String(vector.id)
-        
-        addChild(vectorNode)
-    }
-    
-    func addVector(_ vector: Vector) {
-        vectors.append(vector)
-        drawVector(vector)
-    }
-    
-    func removeVectorByID(_ id: Int) {
-        if let node = childNode(withName: String(id)) {
-            node.removeFromParent()
-        }
-    }
-    
-    private func shortenVectorEnd(from start: CGPoint, to end: CGPoint, by distance: CGFloat) -> CGPoint {
-        let dx = end.x - start.x
-        let dy = end.y - start.y
-        
-        let length = sqrt(dx * dx + dy * dy)
-        
-        let directionX = dx / length
-        let directionY = dy / length
-        
-        let newEndX = end.x - directionX * distance
-        let newEndY = end.y - directionY * distance
-        
-        return CGPoint(x: newEndX, y: newEndY)
-    }
-    
-    private func distance(from point1: CGPoint, to point2: CGPoint) -> CGFloat {
-        return sqrt(pow(point2.x - point1.x, 2) + pow(point2.y - point1.y, 2))
-    }
-
+    // MARK: - Gestures
     @objc private func handlePanGesture(_ gesture: UIPanGestureRecognizer) {
         let translation = gesture.translation(in: view)
         if gesture.state == .began {
             lastTranslation = .zero
         }
-        
-        
         
         let deltaX = -(translation.x - lastTranslation.x)
         let deltaY = (translation.y - lastTranslation.y)
@@ -192,33 +77,7 @@ class CanvasScene: SKScene {
         
         lastTranslation = translation
     }
-    
-    
-    private func isConnectedPoint(_ point: CGPoint) -> [Vector] {
-        return vectors.filter { $0.start == point || $0.end == point }
-    }
 
-    private func angleBetweenVectors(v1: Vector, v2: Vector, commonPoint: CGPoint) -> CGFloat {
-        let p1 = (v1.start == commonPoint) ? v1.end : v1.start
-        let p2 = (v2.start == commonPoint) ? v2.end : v2.start
-        
-        let dx1 = p1.x - commonPoint.x
-        let dy1 = p1.y - commonPoint.y
-        let dx2 = p2.x - commonPoint.x
-        let dy2 = p2.y - commonPoint.y
-        
-        let dotProduct = dx1 * dx2 + dy1 * dy2
-        let magnitude1 = sqrt(dx1 * dx1 + dy1 * dy1)
-        let magnitude2 = sqrt(dx2 * dx2 + dy2 * dy2)
-        
-        guard magnitude1 > 0, magnitude2 > 0 else { return 0 }
-        
-        let cosineAngle = dotProduct / (magnitude1 * magnitude2)
-        let angle = acos(cosineAngle) * 180 / .pi
-        
-        return angle
-    }
-    
     @objc private func handleLongPressGesture(_ gesture: UILongPressGestureRecognizer) {
         let location = gesture.location(in: view)
         let sceneLocation = convertPoint(fromView: location)
@@ -274,7 +133,8 @@ class CanvasScene: SKScene {
                     vector.end.y += dy
                     lastTranslation = sceneLocation
                 }
-
+                
+                removeInvalidRightAngleMarkers()
                 removeVectorByID(vector.id)
                 drawVector(vector)
             }
@@ -284,20 +144,20 @@ class CanvasScene: SKScene {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 canvasDelegate?.editVector(vector)
             }
-            
 
-                        
-//            let connectedVectors = isConnectedPoint(selectedVector!.start) + isConnectedPoint(selectedVector!.end)
-//            let commonPoint = selectedVector!.start // Общая точка для всех векторов
-//
-//            for i in 0..<connectedVectors.count {
-//                for j in i+1..<connectedVectors.count {
-//                    let angle = angleBetweenVectors(v1: connectedVectors[i], v2: connectedVectors[j], commonPoint: commonPoint)
-//                    if abs(angle - 90) < 5 {
-//                        drawRightAngleMarker(at: commonPoint, vector1: connectedVectors[i], vector2: connectedVectors[j])
-//                    }
-//                }
-//            }
+            if dragType == .start || dragType == .end {
+                let connectedVectors = isConnectedPoint(selectedVector!.start) + isConnectedPoint(selectedVector!.end)
+                let commonPoint = selectedVector!.start
+
+                for i in 0..<connectedVectors.count {
+                    for j in i+1..<connectedVectors.count {
+                        let angle = angleBetweenVectors(v1: connectedVectors[i], v2: connectedVectors[j], commonPoint: commonPoint)
+                        if abs(angle - 90) < 5 {
+                            drawRightAngleMarker(at: commonPoint, vector1: connectedVectors[i], vector2: connectedVectors[j])
+                        }
+                    }
+                }
+            }
 
             dragType = nil
             selectedVector = nil
@@ -306,8 +166,89 @@ class CanvasScene: SKScene {
             break
         }
     }
+
+    // MARK: - Drawing
+    private func drawGrid() {
+        let gridSize: CGFloat = 50.0
+        let gridLineCount: CGFloat = 50.0
+
+        for x in stride(from: -gridLineCount * gridSize, to: gridLineCount * gridSize, by: gridSize) {
+            let line = SKShapeNode()
+            line.path = UIBezierPath(rect: CGRect(x: x, y: -gridLineCount * gridSize, width: gridSize, height: gridLineCount * 2 * gridSize)).cgPath
+            line.strokeColor = .lightGray
+            line.lineWidth = 1
+            addChild(line)
+        }
+        
+        for y in stride(from: -gridLineCount * gridSize, to: gridLineCount * gridSize, by: gridSize) {
+            let line = SKShapeNode()
+            line.path = UIBezierPath(rect: CGRect(x: -gridLineCount * gridSize, y: y, width: gridLineCount * 2 * gridSize, height: gridSize)).cgPath
+            line.strokeColor = .lightGray
+            line.lineWidth = 1
+            addChild(line)
+        }
+    }
+    
+    func drawVector(_ vector: Vector) {
+        let path = UIBezierPath()
+        
+        path.move(to: vector.start)
+        let shortenedEnd = shortenVectorEnd(from: vector.start, to: vector.end, by: 5.0)
+        path.addLine(to: shortenedEnd)
+        
+        let arrowWidth: CGFloat = 8.0
+        let arrowHeight: CGFloat = 25.0
+        let angle = vector.angle
+        
+        let arrowPoint1 = CGPoint(
+            x: vector.end.x - arrowHeight * cos(angle) + arrowWidth * sin(angle),
+            y: vector.end.y - arrowHeight * sin(angle) - arrowWidth * cos(angle)
+        )
+        let arrowPoint2 = CGPoint(
+            x: vector.end.x - arrowHeight * cos(angle) - arrowWidth * sin(angle),
+            y: vector.end.y - arrowHeight * sin(angle) + arrowWidth * cos(angle)
+        )
+
+        path.move(to: vector.end)
+        path.addLine(to: arrowPoint1)
+        path.addLine(to: arrowPoint2)
+        path.close()
+        
+        let vectorNode = SKShapeNode(path: path.cgPath)
+        vectorNode.fillColor = vector.color
+        vectorNode.strokeColor = vector.color
+        vectorNode.lineWidth = 3
+        vectorNode.lineJoin = .miter
+
+        vectorNode.name = String(vector.id)
+        
+        addChild(vectorNode)
+    }
+    
+    
+    // MARK: - Markers
+    func drawInitialMarkers() {
+        for i in 0..<vectors.count {
+            for j in i+1..<vectors.count {
+                let vector1 = vectors[i]
+                let vector2 = vectors[j]
+                
+                let commonPoint = findCommonPoint(vector1, vector2)
+                if let commonPoint = commonPoint {
+                    let angle = angleBetweenVectors(v1: vector1, v2: vector2, commonPoint: commonPoint)
+                    if abs(angle - 90) < 5 {
+                        drawRightAngleMarker(at: commonPoint, vector1: vector1, vector2: vector2)
+                    }
+                }
+            }
+        }
+    }
     
     private func drawRightAngleMarker(at commonPoint: CGPoint, vector1: Vector, vector2: Vector) {
+        let key = "\(vector1.id)-\(vector2.id)"
+        
+        rightAngleMarkers[key]?.removeFromParent()
+        
         let p1 = (vector1.start == commonPoint) ? vector1.end : vector1.start
         let p2 = (vector2.start == commonPoint) ? vector2.end : vector2.start
         
@@ -342,8 +283,82 @@ class CanvasScene: SKScene {
         markerNode.strokeColor = .black
         markerNode.lineWidth = 2
         addChild(markerNode)
+        
+        rightAngleMarkers[key] = markerNode
+    }
+    
+    private func removeInvalidRightAngleMarkers() {
+        for (key, marker) in rightAngleMarkers {
+            let components = key.split(separator: "-").compactMap { Int($0) }
+            guard components.count == 2,
+                  let v1 = vectors.first(where: { $0.id == components[0] }),
+                  let v2 = vectors.first(where: { $0.id == components[1] }) else { continue }
+
+            let commonPoint = v1.start == v2.start || v1.start == v2.end ? v1.start : v1.end
+            let angle = angleBetweenVectors(v1: v1, v2: v2, commonPoint: commonPoint)
+            
+            if abs(angle - 90) > 5 {
+                marker.removeFromParent()
+                rightAngleMarkers.removeValue(forKey: key)
+            }
+        }
+    }
+    
+    // MARK: - Methods
+    func highlightVector(_ vector: Vector) {
+        guard let node = childNode(withName: String(vector.id)) as? SKShapeNode else { return }
+        
+        if let isHighlighted = node.userData?["isHighlighted"] as? Bool, isHighlighted {
+            return
+        }
+        
+        
+        let originalLineWidth = node.lineWidth
+        node.lineWidth = 5
+        
+        if node.userData == nil {
+            node.userData = NSMutableDictionary()
+        }
+        node.userData?["isHighlighted"] = true
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            print("highlight")
+            node.lineWidth = originalLineWidth
+            node.userData?["isHighlighted"] = false
+        }
     }
 
+    func deleteVector(_ vector: Vector) {
+        vectors.removeAll { $0.id == vector.id }
+        removeVectorByID(vector.id)
+        highlightVector(vector)
+    }
+    
+    func addVector(_ vector: Vector) {
+        vectors.append(vector)
+        drawVector(vector)
+    }
+    
+    func removeVectorByID(_ id: Int) {
+        if let node = childNode(withName: String(id)) {
+            node.removeFromParent()
+        }
+    }
+
+    // MARK: - Snap
+    private func snapToAxis(_ point: CGPoint, relativeTo otherPoint: CGPoint) -> CGPoint {
+        let dx = abs(point.x - otherPoint.x)
+        let dy = abs(point.y - otherPoint.y)
+
+        if dx < snapThreshold {
+            return CGPoint(x: otherPoint.x, y: point.y)
+        } else if dy < snapThreshold {
+            return CGPoint(x: point.x, y: otherPoint.y)
+        }
+
+        return point
+    }
+    
     private func snapToRightAngleFromPoint(newPoint: CGPoint, commonPoint: CGPoint, movingVector: Vector) -> CGPoint {
         let connectedVectors = isConnectedPoint(commonPoint)
         
@@ -383,20 +398,8 @@ class CanvasScene: SKScene {
         
         return CGPoint(x: commonPoint.x + px, y: commonPoint.y + py)
     }
-
-    private func snapToAxis(_ point: CGPoint, relativeTo otherPoint: CGPoint) -> CGPoint {
-        let dx = abs(point.x - otherPoint.x)
-        let dy = abs(point.y - otherPoint.y)
-
-        if dx < snapThreshold {
-            return CGPoint(x: otherPoint.x, y: point.y)
-        } else if dy < snapThreshold {
-            return CGPoint(x: point.x, y: otherPoint.y)
-        }
-
-        return point
-    }
-
+    
+    // MARK: - Utils
     private func isPointNearVector(_ point: CGPoint, _ vector: Vector) -> Bool {
         let lineWidth: CGFloat = dragThreshold
         let startToEnd = distance(from: vector.start, to: vector.end)
@@ -404,6 +407,59 @@ class CanvasScene: SKScene {
         let endToPoint = distance(from: vector.end, to: point)
 
         return abs(startToPoint + endToPoint - startToEnd) < lineWidth
+    }
+    
+    private func isConnectedPoint(_ point: CGPoint) -> [Vector] {
+        return vectors.filter { $0.start == point || $0.end == point }
+    }
+    
+    private func shortenVectorEnd(from start: CGPoint, to end: CGPoint, by distance: CGFloat) -> CGPoint {
+        let dx = end.x - start.x
+        let dy = end.y - start.y
+        
+        let length = sqrt(dx * dx + dy * dy)
+        
+        let directionX = dx / length
+        let directionY = dy / length
+        
+        let newEndX = end.x - directionX * distance
+        let newEndY = end.y - directionY * distance
+        
+        return CGPoint(x: newEndX, y: newEndY)
+    }
+    
+    private func distance(from point1: CGPoint, to point2: CGPoint) -> CGFloat {
+        return sqrt(pow(point2.x - point1.x, 2) + pow(point2.y - point1.y, 2))
+    }
+
+    private func angleBetweenVectors(v1: Vector, v2: Vector, commonPoint: CGPoint) -> CGFloat {
+        let p1 = (v1.start == commonPoint) ? v1.end : v1.start
+        let p2 = (v2.start == commonPoint) ? v2.end : v2.start
+        
+        let dx1 = p1.x - commonPoint.x
+        let dy1 = p1.y - commonPoint.y
+        let dx2 = p2.x - commonPoint.x
+        let dy2 = p2.y - commonPoint.y
+        
+        let dotProduct = dx1 * dx2 + dy1 * dy2
+        let magnitude1 = sqrt(dx1 * dx1 + dy1 * dy1)
+        let magnitude2 = sqrt(dx2 * dx2 + dy2 * dy2)
+        
+        guard magnitude1 > 0, magnitude2 > 0 else { return 0 }
+        
+        let cosineAngle = dotProduct / (magnitude1 * magnitude2)
+        let angle = acos(cosineAngle) * 180 / .pi
+        
+        return angle
+    }
+    
+    private func findCommonPoint(_ vector1: Vector, _ vector2: Vector) -> CGPoint? {
+        if vector1.start == vector2.start || vector1.start == vector2.end {
+            return vector1.start
+        } else if vector1.end == vector2.start || vector1.end == vector2.end {
+            return vector1.end
+        }
+        return nil
     }
 
 }

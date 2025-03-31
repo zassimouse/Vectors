@@ -55,12 +55,6 @@ class ContainerController: UIViewController {
         }
     }
     
-    // MARK: - SetupUI
-    
-    // MARK: - Methods
-    
-    // MARK: - Selectors
-
 }
 
 extension ContainerController: MenuControllerDeledate {

@@ -14,18 +14,21 @@ protocol MenuControllerDeledate: AnyObject {
 
 class MenuController: UIViewController {
     
+    // MARK: - Properties
     weak var delegate: MenuControllerDeledate?
-    
-    var tableView: UITableView!
-    
     var vectors: [Vector] = []
 
+    // MARK: - Subviews
+    var tableView: UITableView!
+    
+    // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         configureTableView()
         vectors = CoreDataManager.shared.fetchVectors()
     }
     
+    // MARK: - Methods
     func addVector(_ vector: Vector) {
         vectors.append(vector)
         tableView.reloadData()

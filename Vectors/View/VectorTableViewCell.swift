@@ -52,6 +52,13 @@ class VectorTableViewCell: UITableViewCell {
         fatalError("init(coder:) has not been implemented")
     }
     
+    func configure(with vector: Vector) {
+        colorDot.backgroundColor = vector.color
+        startCoordinateLabel.text = "(\(String(format: "%.2f", vector.start.x).trailingZeroesRemoved); \(String(format: "%.2f", vector.start.y).trailingZeroesRemoved))"
+        endCoordinateLabel.text = "(\(String(format: "%.2f", vector.end.x).trailingZeroesRemoved); \(String(format: "%.2f", vector.end.y).trailingZeroesRemoved))"
+        lengthLabel.text = String(format: "%.2f", vector.length).trailingZeroesRemoved
+    }
+    
     private func setupUI() {
         contentView.backgroundColor = .systemBackground
         
@@ -79,12 +86,5 @@ class VectorTableViewCell: UITableViewCell {
             colorDot.heightAnchor.constraint(equalToConstant: 4),
         ])
     }
-    
-    func configure(with vector: Vector) {
-        colorDot.backgroundColor = vector.color
-        startCoordinateLabel.text = "(\(String(format: "%.2f", vector.start.x).trailingZeroesRemoved); \(String(format: "%.2f", vector.start.y).trailingZeroesRemoved))"
-        endCoordinateLabel.text = "(\(String(format: "%.2f", vector.end.x).trailingZeroesRemoved); \(String(format: "%.2f", vector.end.y).trailingZeroesRemoved))"
-        lengthLabel.text = String(format: "%.2f", vector.length).trailingZeroesRemoved
-    }
-    
+
 }
