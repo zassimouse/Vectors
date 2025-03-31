@@ -10,8 +10,9 @@ import UIKit
 class ContainerController: UIViewController {
 
     // MARK: - Properties
-    var menuController: UIViewController!
-    var centerController: UIViewController!
+    var menuController: MenuController!
+    var navController: UIViewController!
+    var homeController: CanvasController!
     var isExpanded = false
     
     
@@ -23,33 +24,33 @@ class ContainerController: UIViewController {
     
     // MARK: - Handlers
     func configureHomeViewController() {
-        let homeController = CanvasController()
+        homeController = CanvasController()
         homeController.delegate = self
-        centerController = UINavigationController(rootViewController: homeController)
-        view.addSubview(centerController.view)
-        addChild(centerController)
-        centerController.didMove(toParent: self)
+        navController = UINavigationController(rootViewController: homeController)
+        view.addSubview(navController.view)
+        addChild(navController)
+        navController.didMove(toParent: self)
     }
     
     func configureMenuController() {
         if menuController == nil {
             menuController = MenuController()
+            menuController.delegate = self
             view.insertSubview(menuController.view, at: 0)
             addChild(menuController)
             menuController.didMove(toParent: self)
-            print("did add menucontroller")
         }
     }
     
     func showMenuController(shouldExpand: Bool) {
         if shouldExpand {
             UIView.animate(withDuration: 0.3, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0, options: .curveEaseInOut, animations: {
-                self.centerController.view.frame.origin.x = self.centerController.view.frame.width / 3
+                self.navController.view.frame.origin.x = self.navController.view.frame.width / 3
             }, completion: nil)
 
         } else {
             UIView.animate(withDuration: 0.3, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0, options: .curveEaseInOut, animations: {
-                self.centerController.view.frame.origin.x = 0
+                self.navController.view.frame.origin.x = 0
             }, completion: nil)
         }
     }
@@ -62,6 +63,13 @@ class ContainerController: UIViewController {
 
 }
 
+extension ContainerController: MenuControllerDeledate {
+    func deleteVector(_ vector: Vector) {
+        homeController.deleteVector(vector)
+    }
+}
+
+
 extension ContainerController: HomeControllerDeledate {
     func toggleMenu() {
         if !isExpanded {
@@ -69,5 +77,17 @@ extension ContainerController: HomeControllerDeledate {
         }
         isExpanded = !isExpanded
         showMenuController(shouldExpand: isExpanded)
+    }
+    
+    func addVector(_ vector: Vector) {
+        if menuController != nil {
+            menuController.addVector(vector)
+        }
+    }
+    
+    func editVector(_ vector: Vector) {
+        if menuController != nil {
+            menuController.editVector(vector)
+        }
     }
 }

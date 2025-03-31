@@ -7,17 +7,35 @@
 
 import UIKit
 
+protocol MenuControllerDeledate: AnyObject {
+    func deleteVector(_ vector: Vector)
+}
+
 class MenuController: UIViewController {
+    
+    weak var delegate: MenuControllerDeledate?
     
     var tableView: UITableView!
     
-    var vectors: [Vector] = [Vector(start: CGPoint(x: 0, y: 0), end: CGPoint(x: 20, y: 100))]
+    var vectors: [Vector] = []
 
     override func viewDidLoad() {
         super.viewDidLoad()
         configureTableView()
+        vectors = CoreDataManager.shared.fetchVectors()
     }
     
+    func addVector(_ vector: Vector) {
+        vectors.append(vector)
+        tableView.reloadData()
+    }
+    
+    func editVector(_ vector: Vector) {
+        if let index = vectors.firstIndex(where: { $0.id == vector.id }) {
+            vectors[index] = vector
+            tableView.reloadData()
+        }
+    }
 
     func configureTableView() {
         tableView = UITableView()
@@ -28,19 +46,25 @@ class MenuController: UIViewController {
         tableView.register(VectorTableViewCell.self, forCellReuseIdentifier: VectorTableViewCell.identifier)
         tableView.frame = view.bounds
         view.addSubview(tableView)
-        
+    }
+    
+    func deleteVector(at index: Int) {
+        CoreDataManager.shared.deleteVector(vectors[index])
+        delegate?.deleteVector(vectors[index])
+        vectors.remove(at: index)
+        tableView.reloadData()
     }
 
 }
 
 extension MenuController: UITableViewDelegate, UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        8
+        vectors.count
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: VectorTableViewCell.identifier, for: indexPath) as! VectorTableViewCell
-        cell.configure(with: vectors[0], color: .random)
+        cell.configure(with: vectors[indexPath.row])
         return cell
     }
     
@@ -51,7 +75,7 @@ extension MenuController: UITableViewDelegate, UITableViewDataSource {
     func tableView(_ tableView: UITableView, contextMenuConfigurationForRowAt indexPath: IndexPath, point: CGPoint) -> UIContextMenuConfiguration? {
         return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in
             let deleteAction = UIAction(title: "Delete", image: UIImage(systemName: "trash"), attributes: .destructive) { _ in
-                // Уведомление или удаление элемента
+                self.deleteVector(at: indexPath.row)
             }
             return UIMenu(title: "", children: [deleteAction])
         }

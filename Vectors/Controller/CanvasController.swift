@@ -8,6 +8,12 @@
 import UIKit
 import SpriteKit
 
+protocol HomeControllerDeledate: AnyObject {
+    func toggleMenu()
+    func addVector(_ vector: Vector)
+    func editVector(_ vector: Vector)
+}
+
 class CanvasController: UIViewController {
 
    // MARK: - Properties
@@ -27,12 +33,19 @@ class CanvasController: UIViewController {
         let skView = SKView(frame: view.bounds)
         view.addSubview(skView)
         
+        let vectors = CoreDataManager.shared.fetchVectors()
         scene = CanvasScene(size: view.bounds.size)
+        scene.canvasDelegate = self
+        scene.configure(with: vectors)
         scene.scaleMode = .resizeFill
         skView.presentScene(scene)
     }
     
     // MARK: - Handlers
+    func deleteVector(_ vector: Vector) {
+        scene.deleteVector(vector)
+    }
+    
     func configureNavigationBar() {
         let appearance = UINavigationBarAppearance()
         appearance.configureWithOpaqueBackground()
@@ -78,16 +91,18 @@ class CanvasController: UIViewController {
 
 }
 
+extension CanvasController: CanvasSceneDelegate {
+    func editVector(_ vector: Vector) {
+        CoreDataManager.shared.updateVector(vector)
+        delegate?.editVector(vector)
+    }
+}
+
 extension CanvasController: AddVectorDelegate {
     func didAddVector(startX: CGFloat, startY: CGFloat, endX: CGFloat, endY: CGFloat) {
-        print("Добавлен вектор: (\(startX), \(startY)) -> (\(endX), \(endY))")
-        
         let vector = Vector(start: CGPoint(x: startX, y: startY), end: CGPoint(x: endX, y: endY))
         scene.addVector(vector)
         CoreDataManager.shared.saveVector(vector)
-        let v = CoreDataManager.shared.fetchVectors()
-        v.forEach { vector in
-            print("\(vector.start.x) \(vector.start.y) \(vector.end.x) \(vector.end.y)")
-        }
+        delegate?.addVector(vector)
     }
 }

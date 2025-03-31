@@ -34,7 +34,7 @@ class AddVectorController: UIViewController {
     private let textFieldX1: UITextField = {
         let textField = UITextField()
         textField.borderStyle = .roundedRect
-        textField.keyboardType = .decimalPad
+        textField.keyboardType = .numbersAndPunctuation
         return textField
     }()
     
@@ -48,20 +48,20 @@ class AddVectorController: UIViewController {
     private let textFieldX2: UITextField = {
         let textField = UITextField()
         textField.borderStyle = .roundedRect
-        textField.keyboardType = .decimalPad
+        textField.keyboardType = .numbersAndPunctuation
         return textField
     }()
     
     private let textFieldY2: UITextField = {
         let textField = UITextField()
         textField.borderStyle = .roundedRect
-        textField.keyboardType = .decimalPad
+        textField.keyboardType = .numbersAndPunctuation
         return textField
     }()
     
     private let addButton: UIButton = {
         let button = UIButton()
-        button.setTitle("Добавить", for: .normal)
+        button.setTitle("Add", for: .normal)
         button.backgroundColor = .systemGray
         button.setTitleColor(.white, for: .normal)
         button.layer.cornerRadius = 8
@@ -145,7 +145,6 @@ class AddVectorController: UIViewController {
     }
     
     @objc private func addButtonTapped() {
-        print("add tapped")
         guard let x1 = Double(textFieldX1.text?.replacingOccurrences(of: ",", with: ".") ?? ""),
               let y1 = Double(textFieldX2.text?.replacingOccurrences(of: ",", with: ".") ?? ""),
               let x2 = Double(textFieldY1.text?.replacingOccurrences(of: ",", with: ".") ?? ""),
@@ -156,7 +155,7 @@ class AddVectorController: UIViewController {
     }
     
     private func isValidInput(_ text: String) -> Bool {
-        let regex = "^(?!0\\d)(\\d+|\\d*\\,\\d+)$" // Regex to match numbers like 12.34 or 12345
+        let regex = "^-?(?!0\\d)(\\d+|\\d*\\,\\d+)$"
         let predicate = NSPredicate(format: "SELF MATCHES %@", regex)
         return predicate.evaluate(with: text)
     }
@@ -174,15 +173,41 @@ class AddVectorController: UIViewController {
 
 extension AddVectorController: UITextFieldDelegate {
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        let allowedCharacters = CharacterSet(charactersIn: "0123456789,-")
+        let characterSet = CharacterSet(charactersIn: string)
+        
+        // Разрешаем только цифры, запятую и минус
+        if !allowedCharacters.isSuperset(of: characterSet) {
+            return false
+        }
+
         let currentText = textField.text ?? ""
         let newText = (currentText as NSString).replacingCharacters(in: range, with: string)
 
-        // Prevent starting with a comma
+        // Запрещаем начинать с запятой
         if newText.first == "," {
             return false
         }
 
-        // Allow only one comma
+        // Запрещаем минус не на первом месте
+        if newText.dropFirst().contains("-") {
+            return false
+        }
+
+        // Разрешаем минус только в начале
+        if newText.count > 1, newText.first == "-", !CharacterSet.decimalDigits.contains(newText.unicodeScalars.dropFirst().first!) {
+            return false
+        }
+
+        // Запрещаем начинать с нуля, если за ним нет запятой (учитывая возможный минус)
+        let numberStartIndex = newText.first == "-" ? newText.index(after: newText.startIndex) : newText.startIndex
+        if newText.count > numberStartIndex.utf16Offset(in: newText) + 1,
+           newText[numberStartIndex] == "0",
+           newText[newText.index(after: numberStartIndex)] != "," {
+            return false
+        }
+
+        // Разрешаем только одну запятую
         let commaCount = newText.filter { $0 == "," }.count
         if commaCount > 1 {
             return false
@@ -191,7 +216,6 @@ extension AddVectorController: UITextFieldDelegate {
         return true
     }
 
-    
     func textFieldDidChangeSelection(_ textField: UITextField) {
         updateButtonState()
     }

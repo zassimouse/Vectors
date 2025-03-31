@@ -80,11 +80,15 @@ class VectorTableViewCell: UITableViewCell {
         ])
     }
     
-    func configure(with vector: Vector, color: UIColor) {
-        colorDot.backgroundColor = color
-        startCoordinateLabel.text = "(\(vector.start.x); \(vector.start.y))"
-        endCoordinateLabel.text = "(\(vector.end.x); \(vector.end.y))"
-        lengthLabel.text = "\(vector.length)"
+    func configure(with vector: Vector) {
+        colorDot.backgroundColor = vector.color
+//        startCoordinateLabel.text = "(\(vector.start.x); \(vector.start.y))"
+//        endCoordinateLabel.text = "(\(vector.end.x); \(vector.end.y))"
+//        lengthLabel.text = "\(vector.length)"
+        startCoordinateLabel.text = "(\(String(format: "%.2f", vector.start.x)); \(String(format: "%.2f", vector.start.y)))"
+        endCoordinateLabel.text = "(\(String(format: "%.2f", vector.end.x)); \(String(format: "%.2f", vector.end.y)))"
+        lengthLabel.text = String(format: "%.2f", vector.length)
+
     }
     
 }

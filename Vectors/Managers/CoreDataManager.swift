@@ -56,13 +56,44 @@ class CoreDataManager {
         }
     }
     
-    func deleteVector(_ vector: Vector) {
+    func updateVector(_ vector: Vector) {
         let context = CoreDataManager.shared.context
         let request: NSFetchRequest<VectorEntity> = VectorEntity.fetchRequest()
-        request.predicate = NSPredicate(format: "id == %d", vector.id)
+        request.predicate = NSPredicate(format: "id == %lld", vector.id)
 
         do {
+            let results = try context.fetch(request)
+            if let entity = results.first {
+                entity.startX = Double(vector.start.x)
+                entity.startY = Double(vector.start.y)
+                entity.endX = Double(vector.end.x)
+                entity.endY = Double(vector.end.y)
+                entity.color = vector.color.toData()
+
+                CoreDataManager.shared.saveContext()
+            } else {
+                print("No vector found with ID: \(vector.id)")
+            }
+        } catch {
+            print("Failed to update vector: \(error)")
+        }
+    }
+
+    
+    func deleteVector(_ vector: Vector) {
+        print("delete")
+        let context = CoreDataManager.shared.context
+        let request: NSFetchRequest<VectorEntity> = VectorEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %lld", vector.id)
+
+        do {
+            let results = try context.fetch(request)
+            print("Found \(results.count) vectors with id: \(vector.id)")
+
+            print("do block")
             if let entity = try context.fetch(request).first {
+                print("if block")
+
                 context.delete(entity)
                 CoreDataManager.shared.saveContext()
             }
