@@ -8,8 +8,6 @@
 import CoreData
 import UIKit
 
-import CoreData
-import UIKit
 
 class CoreDataManager {
     static let shared = CoreDataManager()
@@ -38,9 +36,6 @@ class CoreDataManager {
             }
         }
     }
-    
-    
-    
     
     func saveVector(_ vector: Vector) {
         let context = CoreDataManager.shared.context
@@ -75,8 +70,6 @@ class CoreDataManager {
             print("Failed to delete vector: \(error)")
         }
     }
-
-
 }
 
 extension Vector {
@@ -103,8 +96,6 @@ extension Vector {
 
 
 // MARK: - UIColor Encoding & Decoding
-
-
 extension UIColor {
     func toData() -> Data? {
         try? NSKeyedArchiver.archivedData(withRootObject: self, requiringSecureCoding: true)

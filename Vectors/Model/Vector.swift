@@ -8,11 +8,15 @@
 import Foundation
 import UIKit
 
-class Vector {
+class Vector: Equatable {
     var id: Int
     var start: CGPoint
     var end: CGPoint
     let color: UIColor
+    
+    static func ==(lhs: Vector, rhs: Vector) -> Bool {
+        return lhs.id == rhs.id
+    }
 
     var length: CGFloat {
         return sqrt(pow(end.x - start.x, 2) + pow(end.y - start.y, 2))

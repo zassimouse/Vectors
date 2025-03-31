@@ -25,12 +25,23 @@ class CanvasScene: SKScene {
 
     private var lastTranslation = CGPoint.zero
     private var cameraNode = SKCameraNode()
+    
+    private var lastSnappedAngle: CGFloat? = nil
+    private var snappedToAxis = false
+    private var snappedToRightAngle = false
+    
+    private let snapThreshold: CGFloat = 10.0
+
 
     override func didMove(to view: SKView) {
         backgroundColor = .white
+        drawGrid()
         
         let vector = Vector(start: CGPoint(x: 150, y: 150), end: CGPoint(x: 400, y: 100))
         vectors.append(vector)
+        let vector2 = Vector(start: CGPoint(x: 100, y: 80), end: CGPoint(x: 40, y: 200))
+        vectors.append(vector2)
+
         
         for vector in vectors {
             addVector(vector)
@@ -44,9 +55,6 @@ class CanvasScene: SKScene {
         
         longPressGesture = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPressGesture(_:)))
         view.addGestureRecognizer(longPressGesture)
-        
-        drawGrid()
-        drawAxes()
     }
     
     private func drawGrid() {
@@ -70,21 +78,6 @@ class CanvasScene: SKScene {
         }
     }
 
-    private func drawAxes() {
-        let axisLineWidth: CGFloat = 4.0
-        
-        // Draw X Axis
-        let xAxis = SKShapeNode()
-        xAxis.path = UIBezierPath(rect: CGRect(x: -frame.size.width / 2, y: 0, width: frame.size.width, height: axisLineWidth)).cgPath
-        xAxis.fillColor = .black
-        addChild(xAxis)
-
-        // Draw Y Axis
-        let yAxis = SKShapeNode()
-        yAxis.path = UIBezierPath(rect: CGRect(x: 0, y: -frame.size.height / 2, width: axisLineWidth, height: frame.size.height)).cgPath
-        yAxis.fillColor = .black
-        addChild(yAxis)
-    }
     
     func addVector(_ vector: Vector) {
         let path = UIBezierPath()
@@ -108,7 +101,6 @@ class CanvasScene: SKScene {
             y: vector.end.y - arrowHeight * sin(angle) + arrowWidth * cos(angle)
         )
 
-        // Draw the arrowhead
         path.move(to: vector.end)
         path.addLine(to: arrowPoint1)
         path.addLine(to: arrowPoint2)
@@ -125,19 +117,21 @@ class CanvasScene: SKScene {
         addChild(vectorNode)
     }
     
+    func removeVectorByID(_ id: Int) {
+        if let node = childNode(withName: String(id)) {
+            node.removeFromParent()
+        }
+    }
+    
     private func shortenVectorEnd(from start: CGPoint, to end: CGPoint, by distance: CGFloat) -> CGPoint {
-        // Calculate the direction vector from start to end
         let dx = end.x - start.x
         let dy = end.y - start.y
         
-        // Calculate the length of the vector
         let length = sqrt(dx * dx + dy * dy)
         
-        // Normalize the direction vector
         let directionX = dx / length
         let directionY = dy / length
         
-        // Calculate the new end point by moving it towards the start point by 'distance' pixels
         let newEndX = end.x - directionX * distance
         let newEndY = end.y - directionY * distance
         
@@ -163,6 +157,34 @@ class CanvasScene: SKScene {
         lastTranslation = translation
     }
     
+    
+    
+    private func isConnectedPoint(_ point: CGPoint) -> [Vector] {
+        return vectors.filter { $0.start == point || $0.end == point }
+    }
+
+    private func angleBetweenVectors(v1: Vector, v2: Vector, commonPoint: CGPoint) -> CGFloat {
+        let p1 = (v1.start == commonPoint) ? v1.end : v1.start
+        let p2 = (v2.start == commonPoint) ? v2.end : v2.start
+        
+        let dx1 = p1.x - commonPoint.x
+        let dy1 = p1.y - commonPoint.y
+        let dx2 = p2.x - commonPoint.x
+        let dy2 = p2.y - commonPoint.y
+        
+        let dotProduct = dx1 * dx2 + dy1 * dy2
+        let magnitude1 = sqrt(dx1 * dx1 + dy1 * dy1)
+        let magnitude2 = sqrt(dx2 * dx2 + dy2 * dy2)
+        
+        guard magnitude1 > 0, magnitude2 > 0 else { return 0 }
+        
+        let cosineAngle = dotProduct / (magnitude1 * magnitude2)
+        let angle = acos(cosineAngle) * 180 / .pi
+        
+        return angle
+    }
+    
+    
     @objc private func handleLongPressGesture(_ gesture: UILongPressGestureRecognizer) {
         let location = gesture.location(in: view)
         let sceneLocation = convertPoint(fromView: location)
@@ -170,10 +192,10 @@ class CanvasScene: SKScene {
         switch gesture.state {
         case .began:
             for vector in vectors {
-                if distance(from: sceneLocation, to: vector.start) < 20 {
+                if distance(from: sceneLocation, to: vector.start) < 30 {
                     dragType = .start
                     selectedVector = vector
-                } else if distance(from: sceneLocation, to: vector.end) < 20 {
+                } else if distance(from: sceneLocation, to: vector.end) < 30 {
                     dragType = .end
                     selectedVector = vector
                 } else if isPointNearVector(sceneLocation, vector) {
@@ -190,10 +212,25 @@ class CanvasScene: SKScene {
 
         case .changed:
             if let vector = selectedVector {
+                var newPosition = sceneLocation
+
+                for otherVector in vectors where otherVector.id != vector.id {
+                    if distance(from: sceneLocation, to: otherVector.start) < snapThreshold {
+                        newPosition = otherVector.start
+                    } else if distance(from: sceneLocation, to: otherVector.end) < snapThreshold {
+                        newPosition = otherVector.end
+                    }
+                }
+                
+                let referencePoint = (dragType == .start) ? vector.end : vector.start
+
+                newPosition = snapToAxis(newPosition, relativeTo: referencePoint)
+                newPosition = snapToRightAngleFromPoint(newPoint: newPosition, commonPoint: referencePoint, movingVector: vector)
+                
                 if dragType == .start {
-                    vector.start = sceneLocation
+                    vector.start = newPosition
                 } else if dragType == .end {
-                    vector.end = sceneLocation
+                    vector.end = newPosition
                 } else if dragType == .parallel {
                     let dx = sceneLocation.x - lastTranslation.x
                     let dy = sceneLocation.y - lastTranslation.y
@@ -203,11 +240,11 @@ class CanvasScene: SKScene {
                     vector.end.y += dy
                     lastTranslation = sceneLocation
                 }
+
                 removeVectorByID(vector.id)
-                for v in vectors {
-                    addVector(v)
-                }
+                addVector(vector)
             }
+            
 
         case .ended:
             if selectedVector != nil {
@@ -215,21 +252,70 @@ class CanvasScene: SKScene {
             }
             dragType = nil
             selectedVector = nil
+            
+            snappedToAxis = false
+            snappedToRightAngle = false
+            lastSnappedAngle = nil
+
 
         default:
             break
         }
     }
     
-    // Method to remove a vector by its id
-    func removeVectorByID(_ id: Int) {
-        if let node = childNode(withName: String(id)) {
-            node.removeFromParent()
+    private func snapToRightAngleFromPoint(newPoint: CGPoint, commonPoint: CGPoint, movingVector: Vector) -> CGPoint {
+        let connectedVectors = isConnectedPoint(commonPoint)
+        
+        guard connectedVectors.count == 2 else {
+            return newPoint
         }
+        
+        let vector1 = connectedVectors[0]
+        let vector2 = connectedVectors[1]
+        
+        let newVector = Vector(start: commonPoint, end: newPoint)
+        
+        let staticVector = (movingVector == vector1) ? vector2 : vector1
+        let angle = angleBetweenVectors(v1: newVector, v2: staticVector, commonPoint: commonPoint)
+        
+        if abs(angle - 90) < 10 {
+            return correctToRightAnglePosition(vector1: staticVector, vector2: newVector, commonPoint: commonPoint)
+        }
+        
+        return newPoint
     }
 
-    
-    
+    private func correctToRightAnglePosition(vector1: Vector, vector2: Vector, commonPoint: CGPoint) -> CGPoint {
+        let staticPoint = (vector1.start == commonPoint) ? vector1.end : vector1.start
+        let movingPoint = vector2.end
+        
+        let dx = movingPoint.x - commonPoint.x
+        let dy = movingPoint.y - commonPoint.y
+        let sx = staticPoint.x - commonPoint.x
+        let sy = staticPoint.y - commonPoint.y
+        
+        let lengthSquared = sx * sx + sy * sy
+        let projectionFactor = (dx * sx + dy * sy) / lengthSquared
+        
+        let px = dx - projectionFactor * sx
+        let py = dy - projectionFactor * sy
+        
+        return CGPoint(x: commonPoint.x + px, y: commonPoint.y + py)
+    }
+
+    private func snapToAxis(_ point: CGPoint, relativeTo otherPoint: CGPoint) -> CGPoint {
+        let dx = abs(point.x - otherPoint.x)
+        let dy = abs(point.y - otherPoint.y)
+
+        if dx < snapThreshold {
+            return CGPoint(x: otherPoint.x, y: point.y)
+        } else if dy < snapThreshold {
+            return CGPoint(x: point.x, y: otherPoint.y)
+        }
+
+        return point
+    }
+
     private func isPointNearVector(_ point: CGPoint, _ vector: Vector) -> Bool {
         let lineWidth: CGFloat = 20.0
         let startToEnd = distance(from: vector.start, to: vector.end)
