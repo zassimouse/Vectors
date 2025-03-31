@@ -43,16 +43,6 @@ class CanvasScene: SKScene {
         backgroundColor = .white
         drawGrid()
         
-        let vector = Vector(start: CGPoint(x: 150, y: 150), end: CGPoint(x: 400, y: 100))
-        vectors.append(vector)
-        let vector2 = Vector(start: CGPoint(x: 100, y: 80), end: CGPoint(x: 40, y: 200))
-        vectors.append(vector2)
-
-        
-        for vector in vectors {
-            drawVector(vector)
-        }
-        
         camera = cameraNode
         addChild(cameraNode)
         
