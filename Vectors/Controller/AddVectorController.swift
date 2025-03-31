@@ -155,7 +155,7 @@ class AddVectorController: UIViewController {
     }
     
     private func isValidInput(_ text: String) -> Bool {
-        let regex = "^-?(?!0\\d)(\\d+|\\d*\\,\\d+)$"
+        let regex = "^-?(?!0\\d)(\\d+|\\d*\\,\\d{1,2})$"
         let predicate = NSPredicate(format: "SELF MATCHES %@", regex)
         return predicate.evaluate(with: text)
     }
@@ -176,7 +176,6 @@ extension AddVectorController: UITextFieldDelegate {
         let allowedCharacters = CharacterSet(charactersIn: "0123456789,-")
         let characterSet = CharacterSet(charactersIn: string)
         
-        // Разрешаем только цифры, запятую и минус
         if !allowedCharacters.isSuperset(of: characterSet) {
             return false
         }
@@ -184,22 +183,18 @@ extension AddVectorController: UITextFieldDelegate {
         let currentText = textField.text ?? ""
         let newText = (currentText as NSString).replacingCharacters(in: range, with: string)
 
-        // Запрещаем начинать с запятой
         if newText.first == "," {
             return false
         }
 
-        // Запрещаем минус не на первом месте
         if newText.dropFirst().contains("-") {
             return false
         }
 
-        // Разрешаем минус только в начале
         if newText.count > 1, newText.first == "-", !CharacterSet.decimalDigits.contains(newText.unicodeScalars.dropFirst().first!) {
             return false
         }
 
-        // Запрещаем начинать с нуля, если за ним нет запятой (учитывая возможный минус)
         let numberStartIndex = newText.first == "-" ? newText.index(after: newText.startIndex) : newText.startIndex
         if newText.count > numberStartIndex.utf16Offset(in: newText) + 1,
            newText[numberStartIndex] == "0",
@@ -207,7 +202,6 @@ extension AddVectorController: UITextFieldDelegate {
             return false
         }
 
-        // Разрешаем только одну запятую
         let commaCount = newText.filter { $0 == "," }.count
         if commaCount > 1 {
             return false
